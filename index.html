@@ -3,55 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyTracker Pro - Live Cloud Sync</title>
+  <title>StudyTracker Pro - Exact Custom History Format</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Supabase CDN Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen pb-16">
-
-  <!-- Auth Modal (Login / Signup) -->
-  <div id="authModal" class="hidden fixed inset-0 z-[120] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-      <div class="text-center space-y-1">
-        <div class="w-12 h-12 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto mb-2">
-          <i data-lucide="cloud" class="w-6 h-6"></i>
-        </div>
-        <h3 id="authTitle" class="text-lg font-bold text-white">Cloud Account Login</h3>
-        <p class="text-xs text-slate-400">Kisi bhi mobile ya computer par data access karne ke liye login karein</p>
-      </div>
-
-      <form id="authForm" class="space-y-3">
-        <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Email</label>
-          <input type="email" id="authEmail" required placeholder="name@example.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
-          <input type="password" id="authPassword" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-indigo-500 focus:outline-none">
-        </div>
-
-        <button type="submit" id="authSubmitBtn" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm transition">
-          Login Karein
-        </button>
-      </form>
-
-      <div class="text-center">
-        <button type="button" onclick="toggleAuthMode()" id="toggleAuthBtn" class="text-xs text-indigo-400 hover:underline">
-          Naya account banayein (Sign Up)
-        </button>
-      </div>
-      <button type="button" onclick="closeAuthModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-400 rounded-xl">
-        Cancel / Offline Mode
-      </button>
-    </div>
-  </div>
 
   <!-- Target Achieved Prompt Modal -->
   <div id="targetAchievedModal" class="hidden fixed inset-0 z-[110] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -157,18 +118,12 @@
         </div>
         <div>
           <h1 class="text-xl font-bold tracking-tight">StudyTracker Pro</h1>
-          <p class="text-xs text-slate-400">Live Study Logger with Cloud Sync</p>
+          <p class="text-xs text-slate-400">Live Study Logger (12-Hour AM/PM Time Format)</p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button onclick="openAuthModal()" id="userAuthStatusBtn" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-indigo-300 hover:bg-slate-700 transition">
-          <i data-lucide="cloud" class="w-3.5 h-3.5"></i>
-          <span id="userEmailTag">Cloud Login</span>
-        </button>
-        <div class="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="currentDateDisplay" class="text-xs font-semibold text-slate-300"></span>
-        </div>
+      <div class="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="currentDateDisplay" class="text-xs font-semibold text-slate-300"></span>
       </div>
     </div>
   </header>
@@ -424,24 +379,11 @@
   </main>
 
   <script>
-    // ==========================================
-    // 1. SUPABASE PROJECT INTEGRATION
-    // ==========================================
-    const SUPABASE_URL = "https://yffohnbxwurnaajanvuc.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmZm9obmJ4d3VybmFhamFudnVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjQ0MjIsImV4cCI6MjEwMjkwMDQyMn0.RcOjYyuf2Ip_giYl6ppcMi-SS76WwS4lnQSWyVJ8fv0";
-    
-    let supabase = null;
-    if (window.supabase) {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-
     const defaultSubjects = ['General Studies (GS)', 'Mathematics', 'Reasoning', 'Hindi', 'English', 'History', 'Geography', 'Science'];
     let subjects = JSON.parse(localStorage.getItem('study_subjects_list')) || defaultSubjects;
     let logs = JSON.parse(localStorage.getItem('study_logs_data')) || [];
     let activeSession = JSON.parse(localStorage.getItem('active_study_session')) || null;
-    let currentUser = null;
-    let isSignUpMode = false;
-
+    
     let dailyTargetMins = parseInt(localStorage.getItem('daily_target_mins')) || 360;
     let targetPromptShownForToday = localStorage.getItem('target_prompt_date') === getTodayDateString();
 
@@ -490,7 +432,10 @@
 
     function formatTime12Hour(input) {
       if (!input) return '--:-- --';
-      if (typeof input === 'string' && (input.includes('AM') || input.includes('PM'))) return input;
+      
+      if (typeof input === 'string' && (input.includes('AM') || input.includes('PM'))) {
+        return input;
+      }
 
       let hours, minutes;
       if (input instanceof Date) {
@@ -516,176 +461,6 @@
       weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
     });
 
-    // ==========================================
-    // 2. SUPABASE CLOUD AUTH & DATA SYNC
-    // ==========================================
-    async function initSupabaseAuth() {
-      if (!supabase) return;
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) {
-        currentUser = session.user;
-        updateUserUI();
-        await fetchCloudData();
-      }
-
-      supabase.auth.onAuthStateChange(async (event, session) => {
-        if (session && session.user) {
-          currentUser = session.user;
-          updateUserUI();
-          await fetchCloudData();
-        } else {
-          currentUser = null;
-          updateUserUI();
-        }
-      });
-    }
-
-    function updateUserUI() {
-      const tag = document.getElementById('userEmailTag');
-      if (currentUser) {
-        tag.innerText = currentUser.email.split('@')[0];
-      } else {
-        tag.innerText = 'Cloud Login';
-      }
-    }
-
-    function openAuthModal() {
-      if (currentUser) {
-        if (confirm(`Aap already logged in hain (${currentUser.email}). Kya aap logout karna chahte hain?`)) {
-          if (supabase) supabase.auth.signOut();
-          currentUser = null;
-          updateUserUI();
-        }
-        return;
-      }
-      document.getElementById('authModal').classList.remove('hidden');
-      lucide.createIcons();
-    }
-
-    function closeAuthModal() {
-      document.getElementById('authModal').classList.add('hidden');
-    }
-
-    function toggleAuthMode() {
-      isSignUpMode = !isSignUpMode;
-      document.getElementById('authTitle').innerText = isSignUpMode ? 'Naya Account Banayein' : 'Cloud Account Login';
-      document.getElementById('authSubmitBtn').innerText = isSignUpMode ? 'Sign Up Karein' : 'Login Karein';
-      document.getElementById('toggleAuthBtn').innerText = isSignUpMode ? 'Already account hai? Login karein' : 'Naya account banayein (Sign Up)';
-    }
-
-    document.getElementById('authForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      if (!supabase) {
-        alert("Supabase initialize nahi ho paya!");
-        return;
-      }
-
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
-
-      try {
-        if (isSignUpMode) {
-          const { data, error } = await supabase.auth.signUp({ email, password });
-          if (error) throw error;
-          alert("Account ban gaya hai! Ab aap login kar sakte hain.");
-          toggleAuthMode();
-        } else {
-          const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-          if (error) throw error;
-          currentUser = data.user;
-          closeAuthModal();
-          updateUserUI();
-          await fetchCloudData();
-        }
-      } catch (err) {
-        alert("Error: " + err.message);
-      }
-    });
-
-    async function fetchCloudData() {
-      if (!supabase || !currentUser) return;
-
-      try {
-        const { data: cloudLogs, error: logErr } = await supabase
-          .from('study_logs')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (!logErr && cloudLogs) {
-          logs = cloudLogs.map(l => ({
-            id: l.id,
-            subject: l.subject,
-            topic: l.topic,
-            duration: l.duration,
-            startTime: l.start_time,
-            endTime: l.end_time,
-            endTimestamp: l.end_timestamp,
-            date: l.date,
-            createdAt: l.created_at
-          }));
-          localStorage.setItem('study_logs_data', JSON.stringify(logs));
-        }
-
-        const { data: cloudSubs, error: subErr } = await supabase
-          .from('study_subjects')
-          .select('name');
-
-        if (!subErr && cloudSubs && cloudSubs.length > 0) {
-          subjects = cloudSubs.map(s => s.name);
-          localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
-        }
-
-        renderSubjectDropdown();
-        renderAll();
-      } catch (e) {
-        console.error("Cloud fetch error:", e);
-      }
-    }
-
-    async function saveLogToCloud(newLog) {
-      if (!supabase || !currentUser) return;
-      try {
-        await supabase.from('study_logs').insert([{
-          id: newLog.id,
-          user_id: currentUser.id,
-          subject: newLog.subject,
-          topic: newLog.topic,
-          duration: newLog.duration,
-          start_time: newLog.startTime,
-          end_time: newLog.endTime,
-          end_timestamp: newLog.endTimestamp,
-          date: newLog.date
-        }]);
-      } catch (err) {
-        console.error("Cloud log save error:", err);
-      }
-    }
-
-    async function saveSubjectToCloud(subjectName) {
-      if (!supabase || !currentUser) return;
-      try {
-        await supabase.from('study_subjects').insert([{
-          user_id: currentUser.id,
-          name: subjectName
-        }]);
-      } catch (err) {
-        console.error("Cloud subject save error:", err);
-      }
-    }
-
-    async function deleteSubjectFromCloud(subjectName) {
-      if (!supabase || !currentUser) return;
-      try {
-        await supabase.from('study_subjects').delete().eq('name', subjectName).eq('user_id', currentUser.id);
-      } catch (err) {
-        console.error("Cloud subject delete error:", err);
-      }
-    }
-
-    // ==========================================
-    // 3. UI RENDERING & TIMER LOGIC
-    // ==========================================
     function renderSubjectDropdown(selectedSubject = '') {
       const select = document.getElementById('subjectSelect');
       if (subjects.length === 0) {
@@ -704,7 +479,6 @@
         if (!subjects.includes(clean)) {
           subjects.push(clean);
           localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
-          saveSubjectToCloud(clean);
           renderSubjectDropdown(clean);
           renderAll();
         } else {
@@ -726,7 +500,6 @@
       if (confirm(`Kya aap subject "${subjectToDelete}" ko list se hatana chahte hain?`)) {
         subjects = subjects.filter(s => s !== subjectToDelete);
         localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
-        deleteSubjectFromCloud(subjectToDelete);
         renderSubjectDropdown(subjects[0]);
         renderAll();
       }
@@ -882,7 +655,6 @@
 
           logs.unshift(completedLog);
           localStorage.setItem('study_logs_data', JSON.stringify(logs));
-          saveLogToCloud(completedLog);
           
           const topicName = activeSession.topic;
           localStorage.removeItem('active_study_session');
@@ -1071,7 +843,7 @@
       }
     }
 
-    // 3-Line History Output (With Synchronized Subject Colors)
+    // Exact 3-Line Structure Requested for History
     function renderLogsList() {
       const container = document.getElementById('logsContainer');
       const filtered = getFilteredLogs(currentFilter);
@@ -1091,6 +863,8 @@
         const subColor = getSubjectColor(item.subject);
         return `
           <div class="bg-slate-900/80 border border-slate-700/60 p-3.5 rounded-xl space-y-1.5 hover:border-slate-600 transition">
+            
+            <!-- Line 1: Subject Name + Topic Name -->
             <div class="flex items-center gap-2 flex-wrap">
               <span class="px-2.5 py-0.5 rounded-md text-xs font-bold transition" style="background-color: ${subColor}20; color: ${subColor}; border: 1px solid ${subColor}40;">
                 ${item.subject}
@@ -1098,15 +872,18 @@
               <span class="text-sm font-semibold text-slate-100">${item.topic}</span>
             </div>
 
+            <!-- Line 2: Duration (Start Time - End Time) -->
             <div class="text-xs text-slate-300 font-mono flex items-center gap-1.5">
               <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
               <span>${formatTime(item.duration)} (${formatTime12Hour(item.startTime)} - ${formatTime12Hour(item.endTime)})</span>
             </div>
 
+            <!-- Line 3: Date -->
             <div class="text-xs text-slate-400 font-mono flex items-center gap-1.5">
               <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-400"></i>
               <span>${item.date}</span>
             </div>
+
           </div>
         `;
       }).join('');
@@ -1393,7 +1170,6 @@
     renderSubjectDropdown();
     renderAll();
     checkActiveSessionTimer();
-    initSupabaseAuth();
   </script>
 </body>
 </html>
