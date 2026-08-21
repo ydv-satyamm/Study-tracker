@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyTracker Pro - Morning Alarm & Festivals</title>
+  <title>StudyTracker Pro - Welcome & Notification Prompt</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -14,6 +14,27 @@
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen pb-16">
+
+  <!-- Welcome / Signature Popup Modal -->
+  <div id="welcomeModal" class="hidden fixed inset-0 z-[160] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-gradient-to-b from-indigo-950 via-slate-900 to-slate-900 border-2 border-indigo-500/50 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-5 animate-pulse">
+      <div class="w-16 h-16 bg-indigo-600/20 text-indigo-400 rounded-full flex items-center justify-center mx-auto border border-indigo-500/40 shadow-lg">
+        <i data-lucide="sparkles" class="w-8 h-8"></i>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-2xl font-black text-white tracking-wide">Aapka Swagat Hai 🙏</h3>
+        <p class="text-xs text-indigo-300 font-medium">StudyTracker Pro me aapki safalta ki taiyari shuru hoti hai.</p>
+      </div>
+
+      <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 text-center">
+        <span class="text-xs font-bold tracking-wider text-amber-400 block">⚡ Powered by 𓊈 ꕶ𝐚𐍄ꪗ𝓪𝓂 𓊉 🚩</span>
+      </div>
+
+      <button onclick="dismissWelcomeModal()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] transition text-white font-bold rounded-xl text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+        <i data-lucide="bell-ring" class="w-4 h-4"></i> Aage Badhein & Enable Notifications
+      </button>
+    </div>
+  </div>
 
   <!-- Status Toast Bar -->
   <div id="syncToast" class="hidden fixed bottom-4 right-4 z-[150] bg-slate-800 border border-slate-700 text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 transition-all">
@@ -202,7 +223,7 @@
         </div>
         <div>
           <h1 class="text-xl font-bold tracking-tight">StudyTracker Pro</h1>
-          <p class="text-xs text-slate-400">Morning Alarms & Festivals Notification Active</p>
+          <p class="text-xs text-slate-400">⚡ Powered by 𓊈 ꕶ𝐚𐍄ꪗ𝓪𝓂 𓊉 🚩</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -482,7 +503,7 @@
       console.warn("Supabase bypass:", err);
     }
 
-    // Register Background Service Worker & Schedule Morning/Festival Alarms
+    // Register Background Service Worker
     let swRegistration = null;
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then((reg) => {
@@ -505,16 +526,29 @@
       }
     }
 
-    // Check & Fire Festival / Morning Special Notifications on Launch
+    // Show Welcome Modal on first launch
+    window.addEventListener('DOMContentLoaded', () => {
+      const hasSeenWelcome = localStorage.getItem('has_seen_welcome_popup');
+      if (!hasSeenWelcome) {
+        document.getElementById('welcomeModal').classList.remove('hidden');
+        lucide.createIcons();
+      }
+    });
+
+    function dismissWelcomeModal() {
+      document.getElementById('welcomeModal').classList.add('hidden');
+      localStorage.setItem('has_seen_welcome_popup', 'true');
+      requestNotificationPermission();
+    }
+
+    // Check Festival and Morning Alerts
     function checkFestivalAndMorningAlerts() {
       if ('Notification' in window && Notification.permission !== 'granted') return;
       
       const now = new Date();
-      const month = now.getMonth() + 1; // 1-12
+      const month = now.getMonth() + 1;
       const day = now.getDate();
-      const hours = now.getHours();
 
-      // Festival Calendar Mapping (MM-DD)
       const festivals = {
         "1-1": "🎉 Nav Varsh (New Year) ki hardik shubhkamnayein! Naye saal me naye target achieve karein!",
         "1-14": "🪁 Makar Sankranti / Pongal ki shubhkamnayein! Patang ki tarah apni mehnat ko bhi unchaiyon par le jayein!",
