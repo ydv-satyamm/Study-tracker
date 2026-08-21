@@ -18,7 +18,7 @@ self.addEventListener('message', (event) => {
       vibrate: [500, 250, 500, 250, 500],
       tag: 'study-timer-complete',
       renotify: true,
-      requireInteraction: true // Lock screen par notification tiki rahegi jab tak user interact na kare
+      requireInteraction: true
     });
   }
 });
