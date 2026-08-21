@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyTracker Pro - Lock Screen Notifications</title>
+  <title>StudyTracker Pro - Morning Alarm & Festivals</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -202,7 +202,7 @@
         </div>
         <div>
           <h1 class="text-xl font-bold tracking-tight">StudyTracker Pro</h1>
-          <p class="text-xs text-slate-400">Lock-Screen & Notification Alerts Enabled</p>
+          <p class="text-xs text-slate-400">Morning Alarms & Festivals Notification Active</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -479,27 +479,66 @@
         supabaseClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY);
       }
     } catch(err) {
-      console.warn("Supabase initialization bypassed:", err);
+      console.warn("Supabase bypass:", err);
     }
 
-    // Register Background Service Worker
+    // Register Background Service Worker & Schedule Morning/Festival Alarms
     let swRegistration = null;
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').then((reg) => {
         swRegistration = reg;
+        if (reg.active) {
+          reg.active.postMessage({ type: 'SCHEDULE_MORNING_ALARM' });
+        } else {
+          navigator.serviceWorker.ready.then(activeReg => {
+            activeReg.active.postMessage({ type: 'SCHEDULE_MORNING_ALARM' });
+          });
+        }
       }).catch((err) => {
         console.warn("Service Worker registration bypassed:", err);
       });
     }
 
-    // Ask System Notification Permission
     function requestNotificationPermission() {
       if ('Notification' in window && Notification.permission !== 'granted') {
         Notification.requestPermission();
       }
     }
 
-    // Dispatch Lock-Screen & Panel Push Alert
+    // Check & Fire Festival / Morning Special Notifications on Launch
+    function checkFestivalAndMorningAlerts() {
+      if ('Notification' in window && Notification.permission !== 'granted') return;
+      
+      const now = new Date();
+      const month = now.getMonth() + 1; // 1-12
+      const day = now.getDate();
+      const hours = now.getHours();
+
+      // Festival Calendar Mapping (MM-DD)
+      const festivals = {
+        "1-1": "🎉 Nav Varsh (New Year) ki hardik shubhkamnayein! Naye saal me naye target achieve karein!",
+        "1-14": "🪁 Makar Sankranti / Pongal ki shubhkamnayein! Patang ki tarah apni mehnat ko bhi unchaiyon par le jayein!",
+        "1-26": "🇮🇳 Ganatantra Diwas (Republic Day) ki hardik shubhkamnayein! Desh ke vikas me apna yogdaan dein!",
+        "8-15": "🇮🇳 Swatantrata Diwas (Independence Day) ki hardik shubhkamnayein! Aaj desh ke naam ek study session zaroor karein!",
+        "10-2": "🕊️ Gandhi Jayanti ki shubhkamnayein! Saty aur ahimsa ke marg par chalkar aage badhein!",
+        "11-1": "🪔 Deepawali ki hardik shubhkamnayein! Aapke jeevan me gyan aur safalta ka roshan ho!"
+      };
+
+      const dateKey = `${month}-${day}`;
+      const lastChecked = localStorage.getItem('last_festival_alert_date');
+
+      if (festivals[dateKey] && lastChecked !== getTodayDateString()) {
+        localStorage.setItem('last_festival_alert_date', getTodayDateString());
+        if (swRegistration && swRegistration.active) {
+          swRegistration.active.postMessage({
+            type: 'TRIGGER_SESSION_NOTIFICATION',
+            title: "🌟 Special Festival Greeting!",
+            body: festivals[dateKey]
+          });
+        }
+      }
+    }
+
     function triggerSystemLockScreenNotification(topicName, durationMins) {
       const title = "Study Session Complete! 🏆";
       const body = `Shaandaar! Aapka "${topicName}" session (${formatTime(durationMins)}) complete ho gaya hai.`;
@@ -508,14 +547,10 @@
         swRegistration.active.postMessage({
           type: 'TRIGGER_SESSION_NOTIFICATION',
           title: title,
-          body: body,
-          icon: 'https://cdn-icons-png.flaticon.com/512/3281/3281329.png'
+          body: body
         });
       } else if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-          body: body,
-          icon: 'https://cdn-icons-png.flaticon.com/512/3281/3281329.png'
-        });
+        new Notification(title, { body: body });
       }
     }
 
@@ -1008,7 +1043,6 @@
       document.getElementById('alarmTopicText').innerText = `"${topicName}" session complete & permanently saved!`;
       document.getElementById('alarmModal').classList.remove('hidden');
 
-      // Trigger system & lock screen notifications
       triggerSystemLockScreenNotification(topicName, durationMins);
 
       if (navigator.vibrate) navigator.vibrate([600, 300, 600, 300, 600]);
@@ -1183,7 +1217,6 @@
         return;
       }
 
-      // Request lock-screen & panel notification permission
       requestNotificationPermission();
 
       const subject = document.getElementById('subjectSelect').value;
@@ -1656,6 +1689,7 @@
     renderAll();
     checkActiveSessionTimer();
     updateUserUI();
+    checkFestivalAndMorningAlerts();
     if (currentProfile) {
       syncDataWithCloud();
       startSessionWatcher();
