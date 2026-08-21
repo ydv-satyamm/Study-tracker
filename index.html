@@ -3,16 +3,100 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyTracker Pro - Exact Custom History Format</title>
+  <title>StudyTracker Pro - Lock Screen Notifications</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen pb-16">
+
+  <!-- Status Toast Bar -->
+  <div id="syncToast" class="hidden fixed bottom-4 right-4 z-[150] bg-slate-800 border border-slate-700 text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 transition-all">
+    <span id="syncToastDot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="syncToastMsg" class="font-medium text-slate-200">Syncing...</span>
+  </div>
+
+  <!-- Force Logout Alert Modal -->
+  <div id="forceLogoutModal" class="hidden fixed inset-0 z-[140] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border-2 border-rose-500 rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+      <div class="w-14 h-14 bg-rose-500/20 text-rose-400 rounded-2xl flex items-center justify-center mx-auto border border-rose-500/40">
+        <i data-lucide="smartphone" class="w-7 h-7"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white">Logged Out From This Device</h3>
+      <p class="text-xs text-slate-300">Aapka account kisi doosre device me login ho gaya hai. Security ke liye is device se logout kiya gaya hai.</p>
+      <button onclick="acknowledgeForceLogout()" class="w-full py-3 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition">
+        Theek Hai (OK)
+      </button>
+    </div>
+  </div>
+
+  <!-- Simple Name + Email Login Modal -->
+  <div id="authModal" class="hidden fixed inset-0 z-[120] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-2xl flex items-center justify-center mx-auto mb-2">
+          <i data-lucide="user-check" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-lg font-bold text-white">StudyTracker Login</h3>
+        <p class="text-xs text-slate-400">Apna Name aur Email daal kar session start karein</p>
+      </div>
+
+      <form id="simpleLoginForm" class="space-y-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Aapka Naam (Full Name)</label>
+          <input type="text" id="loginNameInput" required placeholder="e.g. Satyam Yadav" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Email ID</label>
+          <input type="email" id="loginEmailInput" required placeholder="name@example.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none">
+        </div>
+
+        <p id="authErrorMsg" class="hidden text-xs text-rose-400 font-medium"></p>
+
+        <button type="submit" id="authSubmitBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Login Here
+        </button>
+      </form>
+
+      <button type="button" onclick="closeAuthModal()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs text-slate-400 rounded-xl">
+        Cancel / Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Add Subject Modal -->
+  <div id="addSubjectModal" class="hidden fixed inset-0 z-[130] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="book-plus" class="w-5 h-5 text-indigo-400"></i> Naya Subject Add Karein
+        </h3>
+        <button onclick="closeAddSubjectModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="addSubjectForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Subject Ka Naam</label>
+          <input type="text" id="newSubjectNameInput" required placeholder="e.g. Economics, Polity, Physics"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeAddSubjectModal()" class="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 rounded-xl transition">
+            Cancel
+          </button>
+          <button type="submit" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white rounded-xl transition">
+            Save Subject
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Target Achieved Prompt Modal -->
   <div id="targetAchievedModal" class="hidden fixed inset-0 z-[110] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
@@ -118,12 +202,18 @@
         </div>
         <div>
           <h1 class="text-xl font-bold tracking-tight">StudyTracker Pro</h1>
-          <p class="text-xs text-slate-400">Live Study Logger (12-Hour AM/PM Time Format)</p>
+          <p class="text-xs text-slate-400">Lock-Screen & Notification Alerts Enabled</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="currentDateDisplay" class="text-xs font-semibold text-slate-300"></span>
+      <div class="flex items-center gap-2">
+        <button onclick="openAuthModal()" id="userAuthStatusBtn" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-semibold text-indigo-300 hover:bg-slate-700 transition">
+          <span id="cloudStatusIndicator" class="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span id="userNameTag">Login (Name + Mail)</span>
+        </button>
+        <div class="flex items-center gap-2 bg-slate-800/80 px-3.5 py-1.5 rounded-full border border-slate-700">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="currentDateDisplay" class="text-xs font-semibold text-slate-300"></span>
+        </div>
       </div>
     </div>
   </header>
@@ -212,7 +302,7 @@
               <div class="flex justify-between items-center mb-1">
                 <label class="block text-xs font-medium text-slate-300">Subject Select Karein</label>
                 <div class="flex items-center gap-2">
-                  <button type="button" onclick="addNewSubjectPrompt()" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold">
+                  <button type="button" onclick="openAddSubjectModal()" class="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold">
                     <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add
                   </button>
                   <span class="text-slate-600">|</span>
@@ -222,7 +312,8 @@
                 </div>
               </div>
               <div class="relative">
-                <select id="subjectSelect" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-white"></select>
+                <select id="subjectSelect" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-white">
+                </select>
               </div>
             </div>
 
@@ -379,11 +470,104 @@
   </main>
 
   <script>
-    const defaultSubjects = ['General Studies (GS)', 'Mathematics', 'Reasoning', 'Hindi', 'English', 'History', 'Geography', 'Science'];
-    let subjects = JSON.parse(localStorage.getItem('study_subjects_list')) || defaultSubjects;
-    let logs = JSON.parse(localStorage.getItem('study_logs_data')) || [];
-    let activeSession = JSON.parse(localStorage.getItem('active_study_session')) || null;
+    const SUPABASE_PROJECT_URL = "https://yffohnbxwurnaajanvuc.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmZm9obmJ4d3VybmFhamFudnVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMjQ0MjIsImV4cCI6MjEwMjkwMDQyMn0.RcOjYyuf2Ip_giYl6ppcMi-SS76WwS4lnQSWyVJ8fv0";
     
+    let supabaseClient = null;
+    try {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        supabaseClient = window.supabase.createClient(SUPABASE_PROJECT_URL, SUPABASE_ANON_KEY);
+      }
+    } catch(err) {
+      console.warn("Supabase initialization bypassed:", err);
+    }
+
+    // Register Background Service Worker
+    let swRegistration = null;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').then((reg) => {
+        swRegistration = reg;
+      }).catch((err) => {
+        console.warn("Service Worker registration bypassed:", err);
+      });
+    }
+
+    // Ask System Notification Permission
+    function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    }
+
+    // Dispatch Lock-Screen & Panel Push Alert
+    function triggerSystemLockScreenNotification(topicName, durationMins) {
+      const title = "Study Session Complete! 🏆";
+      const body = `Shaandaar! Aapka "${topicName}" session (${formatTime(durationMins)}) complete ho gaya hai.`;
+
+      if (swRegistration && swRegistration.active) {
+        swRegistration.active.postMessage({
+          type: 'TRIGGER_SESSION_NOTIFICATION',
+          title: title,
+          body: body,
+          icon: 'https://cdn-icons-png.flaticon.com/512/3281/3281329.png'
+        });
+      } else if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+          body: body,
+          icon: 'https://cdn-icons-png.flaticon.com/512/3281/3281329.png'
+        });
+      }
+    }
+
+    const initialDefaultSubjects = [
+      'General Studies (GS)',
+      'Mathematics',
+      'Reasoning',
+      'Hindi',
+      'English',
+      'History',
+      'Geography',
+      'Science'
+    ];
+
+    let storedSubjects = null;
+    try {
+      storedSubjects = JSON.parse(localStorage.getItem('study_subjects_list'));
+    } catch(e) {
+      storedSubjects = null;
+    }
+
+    let subjects = (Array.isArray(storedSubjects) && storedSubjects.length > 0) ? storedSubjects : initialDefaultSubjects;
+    
+    let storedLogs = null;
+    try {
+      storedLogs = JSON.parse(localStorage.getItem('study_logs_data'));
+    } catch(e) {
+      storedLogs = null;
+    }
+    let logs = Array.isArray(storedLogs) ? storedLogs : [];
+
+    let storedActive = null;
+    try {
+      storedActive = JSON.parse(localStorage.getItem('active_study_session'));
+    } catch(e) {
+      storedActive = null;
+    }
+    let activeSession = storedActive;
+
+    let currentProfile = null;
+    try {
+      currentProfile = JSON.parse(localStorage.getItem('study_user_profile'));
+    } catch(e) {
+      currentProfile = null;
+    }
+
+    let currentSessionToken = localStorage.getItem('study_device_session_token');
+    if (!currentSessionToken) {
+      currentSessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('study_device_session_token', currentSessionToken);
+    }
+
     let dailyTargetMins = parseInt(localStorage.getItem('daily_target_mins')) || 360;
     let targetPromptShownForToday = localStorage.getItem('target_prompt_date') === getTodayDateString();
 
@@ -396,12 +580,23 @@
     let currentDrilldownView = 'week';
     let timerInterval = null;
     let alarmAudioInterval = null;
+    let sessionWatcherInterval = null;
     let audioCtx = null;
 
     const PALETTE_COLORS = [
       '#6366f1', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6',
       '#3b82f6', '#14b8a6', '#f43f5e', '#eab308', '#a855f7', '#22c55e'
     ];
+
+    function showToast(msg, isSuccess = true) {
+      const toast = document.getElementById('syncToast');
+      const dot = document.getElementById('syncToastDot');
+      const text = document.getElementById('syncToastMsg');
+      dot.className = `w-2 h-2 rounded-full ${isSuccess ? 'bg-emerald-400' : 'bg-rose-500 animate-ping'}`;
+      text.innerText = msg;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3500);
+    }
 
     function getSubjectColor(subjectName) {
       if (!subjectName) return '#6366f1';
@@ -432,10 +627,7 @@
 
     function formatTime12Hour(input) {
       if (!input) return '--:-- --';
-      
-      if (typeof input === 'string' && (input.includes('AM') || input.includes('PM'))) {
-        return input;
-      }
+      if (typeof input === 'string' && (input.includes('AM') || input.includes('PM'))) return input;
 
       let hours, minutes;
       if (input instanceof Date) {
@@ -461,31 +653,50 @@
       weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
     });
 
+    // ==========================================
+    // 2. MODAL & DROPDOWN MANAGEMENT
+    // ==========================================
     function renderSubjectDropdown(selectedSubject = '') {
       const select = document.getElementById('subjectSelect');
-      if (subjects.length === 0) {
-        subjects = ['General Studies (GS)'];
+      if (!select) return;
+      if (!subjects || subjects.length === 0) {
+        subjects = [...initialDefaultSubjects];
         localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
       }
+
       select.innerHTML = subjects.map(sub => `
         <option value="${sub}" ${sub === selectedSubject ? 'selected' : ''}>${sub}</option>
       `).join('');
     }
 
-    function addNewSubjectPrompt() {
-      const newSubject = prompt("Naye Subject ka naam likhein:");
-      if (newSubject && newSubject.trim() !== "") {
-        const clean = newSubject.trim();
-        if (!subjects.includes(clean)) {
-          subjects.push(clean);
-          localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
-          renderSubjectDropdown(clean);
-          renderAll();
-        } else {
-          renderSubjectDropdown(clean);
-        }
-      }
+    function openAddSubjectModal() {
+      document.getElementById('newSubjectNameInput').value = '';
+      document.getElementById('addSubjectModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('newSubjectNameInput').focus(), 50);
+      lucide.createIcons();
     }
+
+    function closeAddSubjectModal() {
+      document.getElementById('addSubjectModal').classList.add('hidden');
+    }
+
+    document.getElementById('addSubjectForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const input = document.getElementById('newSubjectNameInput');
+      const clean = input.value.trim();
+      if (!clean) return;
+
+      if (!subjects.includes(clean)) {
+        subjects.push(clean);
+        localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
+        saveSubjectToCloud(clean);
+        renderSubjectDropdown(clean);
+        renderAll();
+      } else {
+        renderSubjectDropdown(clean);
+      }
+      closeAddSubjectModal();
+    });
 
     function deleteCurrentSubject() {
       const select = document.getElementById('subjectSelect');
@@ -500,11 +711,282 @@
       if (confirm(`Kya aap subject "${subjectToDelete}" ko list se hatana chahte hain?`)) {
         subjects = subjects.filter(s => s !== subjectToDelete);
         localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
+        deleteSubjectFromCloud(subjectToDelete);
         renderSubjectDropdown(subjects[0]);
         renderAll();
       }
     }
 
+    // ==========================================
+    // 3. SINGLE ACTIVE DEVICE SESSION ENGINE
+    // ==========================================
+    function updateUserUI() {
+      const tag = document.getElementById('userNameTag');
+      const ind = document.getElementById('cloudStatusIndicator');
+      if (currentProfile && currentProfile.name) {
+        tag.innerText = currentProfile.name;
+        ind.className = "w-2 h-2 rounded-full bg-emerald-400";
+      } else {
+        tag.innerText = 'Login (Name + Mail)';
+        ind.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+      }
+    }
+
+    function openAuthModal() {
+      if (currentProfile) {
+        if (confirm(`Aap currently "${currentProfile.name}" (${currentProfile.email}) ke roop me logged in hain. Logout karna chahte hain?`)) {
+          performLogout();
+          showToast("Logged out successfully");
+        }
+        return;
+      }
+      document.getElementById('loginNameInput').value = '';
+      document.getElementById('loginEmailInput').value = '';
+      document.getElementById('authErrorMsg').classList.add('hidden');
+      document.getElementById('authModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function performLogout() {
+      currentProfile = null;
+      localStorage.removeItem('study_user_profile');
+      if (sessionWatcherInterval) {
+        clearInterval(sessionWatcherInterval);
+        sessionWatcherInterval = null;
+      }
+      updateUserUI();
+    }
+
+    function triggerForceLogoutUI() {
+      performLogout();
+      document.getElementById('forceLogoutModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function acknowledgeForceLogout() {
+      document.getElementById('forceLogoutModal').classList.add('hidden');
+      location.reload();
+    }
+
+    function startSessionWatcher() {
+      if (sessionWatcherInterval) clearInterval(sessionWatcherInterval);
+      if (!supabaseClient || !currentProfile) return;
+
+      sessionWatcherInterval = setInterval(async () => {
+        if (!currentProfile) return;
+        try {
+          const { data, error } = await supabaseClient
+            .from('profiles')
+            .select('current_session_id')
+            .eq('email', currentProfile.email)
+            .maybeSingle();
+
+          if (!error && data && data.current_session_id) {
+            if (data.current_session_id !== currentSessionToken) {
+              triggerForceLogoutUI();
+            }
+          }
+        } catch (e) {
+          console.warn("Session check bypass:", e);
+        }
+      }, 5000);
+    }
+
+    document.getElementById('simpleLoginForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('loginNameInput').value.trim();
+      const emailInput = document.getElementById('loginEmailInput').value.trim().toLowerCase();
+      const errorMsg = document.getElementById('authErrorMsg');
+
+      if (!emailInput || !nameInput) return;
+
+      currentSessionToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('study_device_session_token', currentSessionToken);
+
+      if (!supabaseClient) {
+        currentProfile = { name: nameInput, email: emailInput };
+        localStorage.setItem('study_user_profile', JSON.stringify(currentProfile));
+        closeAuthModal();
+        updateUserUI();
+        showToast("Offline Profile Set");
+        return;
+      }
+
+      try {
+        const { data: existingUser, error: fetchErr } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .eq('email', emailInput)
+          .maybeSingle();
+
+        if (fetchErr) throw fetchErr;
+
+        if (existingUser) {
+          if (existingUser.name.trim().toLowerCase() !== nameInput.toLowerCase()) {
+            errorMsg.innerText = `⚠️ Ye email pehle se "${existingUser.name}" ke naam par registered hai! Kripya wahi naam enter karein.`;
+            errorMsg.classList.remove('hidden');
+            return;
+          }
+        }
+
+        const { error: upsertErr } = await supabaseClient
+          .from('profiles')
+          .upsert([{ 
+            email: emailInput, 
+            name: nameInput,
+            current_session_id: currentSessionToken 
+          }]);
+
+        if (upsertErr) throw upsertErr;
+
+        currentProfile = { name: nameInput, email: emailInput };
+        localStorage.setItem('study_user_profile', JSON.stringify(currentProfile));
+        closeAuthModal();
+        updateUserUI();
+        showToast(`Welcome, ${nameInput}! Active on this device 📱`);
+
+        await syncDataWithCloud();
+        startSessionWatcher();
+
+      } catch (err) {
+        console.error("Login Auth Error:", err);
+        errorMsg.innerText = "Error: " + (err.message || "Database connection error");
+        errorMsg.classList.remove('hidden');
+      }
+    });
+
+    async function syncDataWithCloud() {
+      if (!supabaseClient || !currentProfile) return;
+
+      try {
+        const { data: cloudLogs, error: logErr } = await supabaseClient
+          .from('study_logs')
+          .select('*')
+          .eq('user_email', currentProfile.email);
+
+        if (logErr) throw logErr;
+
+        const cloudIds = new Set((cloudLogs || []).map(l => l.id));
+        const localLogsToUpload = logs.filter(l => !cloudIds.has(l.id));
+
+        if (localLogsToUpload.length > 0) {
+          const payload = localLogsToUpload.map(l => ({
+            id: l.id,
+            user_email: currentProfile.email,
+            subject: l.subject,
+            topic: l.topic,
+            duration: l.duration,
+            start_time: l.startTime,
+            end_time: l.endTime,
+            end_timestamp: l.endTimestamp || new Date().getTime(),
+            date: l.date
+          }));
+          await supabaseClient.from('study_logs').upsert(payload);
+        }
+
+        const { data: refreshedLogs } = await supabaseClient
+          .from('study_logs')
+          .select('*')
+          .eq('user_email', currentProfile.email)
+          .order('created_at', { ascending: false });
+
+        if (refreshedLogs) {
+          logs = refreshedLogs.map(l => ({
+            id: l.id,
+            subject: l.subject,
+            topic: l.topic,
+            duration: l.duration,
+            startTime: l.start_time,
+            endTime: l.end_time,
+            endTimestamp: l.end_timestamp,
+            date: l.date,
+            createdAt: l.created_at
+          }));
+          localStorage.setItem('study_logs_data', JSON.stringify(logs));
+        }
+
+        const { data: cloudSubs } = await supabaseClient
+          .from('study_subjects')
+          .select('name')
+          .eq('user_email', currentProfile.email);
+
+        const cloudSubNames = new Set((cloudSubs || []).map(s => s.name));
+        const localSubsToUpload = subjects.filter(s => !initialDefaultSubjects.includes(s) && !cloudSubNames.has(s));
+
+        if (localSubsToUpload.length > 0) {
+          const subPayload = localSubsToUpload.map(name => ({
+            user_email: currentProfile.email,
+            name: name
+          }));
+          await supabaseClient.from('study_subjects').insert(subPayload);
+        }
+
+        if (cloudSubs && cloudSubs.length > 0) {
+          cloudSubs.forEach(s => {
+            if (!subjects.includes(s.name)) subjects.push(s.name);
+          });
+          localStorage.setItem('study_subjects_list', JSON.stringify(subjects));
+        }
+
+        renderSubjectDropdown();
+        renderAll();
+        showToast("🟢 Cloud Synced Successfully!");
+      } catch (err) {
+        console.error("Sync error:", err);
+        showToast("⚠️ Cloud Sync Warning", false);
+      }
+    }
+
+    async function saveLogToCloud(newLog) {
+      if (!supabaseClient || !currentProfile) return;
+      try {
+        const { error } = await supabaseClient.from('study_logs').upsert([{
+          id: newLog.id,
+          user_email: currentProfile.email,
+          subject: newLog.subject,
+          topic: newLog.topic,
+          duration: newLog.duration,
+          start_time: newLog.startTime,
+          end_time: newLog.endTime,
+          end_timestamp: newLog.endTimestamp,
+          date: newLog.date
+        }]);
+        if (error) throw error;
+        showToast("Session saved to Cloud ☁️");
+      } catch (err) {
+        console.error("Cloud log save error:", err);
+        showToast("Saved Locally", false);
+      }
+    }
+
+    async function saveSubjectToCloud(subjectName) {
+      if (!supabaseClient || !currentProfile) return;
+      try {
+        await supabaseClient.from('study_subjects').insert([{
+          user_email: currentProfile.email,
+          name: subjectName
+        }]);
+      } catch (err) {
+        console.error("Cloud subject save error:", err);
+      }
+    }
+
+    async function deleteSubjectFromCloud(subjectName) {
+      if (!supabaseClient || !currentProfile) return;
+      try {
+        await supabaseClient.from('study_subjects').delete().eq('name', subjectName).eq('user_email', currentProfile.email);
+      } catch (err) {
+        console.error("Cloud subject delete error:", err);
+      }
+    }
+
+    // ==========================================
+    // 4. TIMER & SESSION HANDLERS
+    // ==========================================
     function playBeep() {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -522,9 +1004,12 @@
       }
     }
 
-    function triggerAlarm(topicName) {
+    function triggerAlarm(topicName, durationMins) {
       document.getElementById('alarmTopicText').innerText = `"${topicName}" session complete & permanently saved!`;
       document.getElementById('alarmModal').classList.remove('hidden');
+
+      // Trigger system & lock screen notifications
+      triggerSystemLockScreenNotification(topicName, durationMins);
 
       if (navigator.vibrate) navigator.vibrate([600, 300, 600, 300, 600]);
 
@@ -655,15 +1140,17 @@
 
           logs.unshift(completedLog);
           localStorage.setItem('study_logs_data', JSON.stringify(logs));
+          saveLogToCloud(completedLog);
           
           const topicName = activeSession.topic;
+          const durationMins = activeSession.duration;
           localStorage.removeItem('active_study_session');
           activeSession = null;
 
           document.getElementById('activeTimerCard').classList.add('hidden');
           renderAll();
           checkActiveSessionTimer();
-          triggerAlarm(topicName);
+          triggerAlarm(topicName, durationMins);
         } else {
           const totalSeconds = Math.floor(distance / 1000);
           const hours = Math.floor(totalSeconds / 3600);
@@ -695,6 +1182,9 @@
         alert("Ek session pehle se chal raha hai!");
         return;
       }
+
+      // Request lock-screen & panel notification permission
+      requestNotificationPermission();
 
       const subject = document.getElementById('subjectSelect').value;
       const hours = parseInt(document.getElementById('hoursSelect').value, 10);
@@ -843,7 +1333,6 @@
       }
     }
 
-    // Exact 3-Line Structure Requested for History
     function renderLogsList() {
       const container = document.getElementById('logsContainer');
       const filtered = getFilteredLogs(currentFilter);
@@ -863,8 +1352,6 @@
         const subColor = getSubjectColor(item.subject);
         return `
           <div class="bg-slate-900/80 border border-slate-700/60 p-3.5 rounded-xl space-y-1.5 hover:border-slate-600 transition">
-            
-            <!-- Line 1: Subject Name + Topic Name -->
             <div class="flex items-center gap-2 flex-wrap">
               <span class="px-2.5 py-0.5 rounded-md text-xs font-bold transition" style="background-color: ${subColor}20; color: ${subColor}; border: 1px solid ${subColor}40;">
                 ${item.subject}
@@ -872,18 +1359,15 @@
               <span class="text-sm font-semibold text-slate-100">${item.topic}</span>
             </div>
 
-            <!-- Line 2: Duration (Start Time - End Time) -->
             <div class="text-xs text-slate-300 font-mono flex items-center gap-1.5">
               <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
               <span>${formatTime(item.duration)} (${formatTime12Hour(item.startTime)} - ${formatTime12Hour(item.endTime)})</span>
             </div>
 
-            <!-- Line 3: Date -->
             <div class="text-xs text-slate-400 font-mono flex items-center gap-1.5">
               <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-400"></i>
               <span>${item.date}</span>
             </div>
-
           </div>
         `;
       }).join('');
@@ -1167,9 +1651,15 @@
       lucide.createIcons();
     }
 
+    // Boot Sequence
     renderSubjectDropdown();
     renderAll();
     checkActiveSessionTimer();
+    updateUserUI();
+    if (currentProfile) {
+      syncDataWithCloud();
+      startSessionWatcher();
+    }
   </script>
 </body>
 </html>
