@@ -8,6 +8,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- jsPDF Library for Colorful PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -407,7 +409,7 @@
               <button onclick="toggleChartType('doughnut')" id="btnDoughnut" class="p-1 rounded bg-slate-700 text-indigo-300 hover:bg-slate-600" title="Donut Chart">
                 <i data-lucide="circle-dot" class="w-3.5 h-3.5"></i>
               </button>
-              <button onclick="toggleChartType('bar')" id="btnBar" class="p-1 rounded bg-slate-900 text-slate-400 hover:bg-slate-800" title="Bar Chart">
+              <button onclick="toggleChartType('bar')" id="btnBar" class="p-1 rounded bg-slate-900 text-slate-400 hover:text-slate-800" title="Bar Chart">
                 <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -430,7 +432,15 @@
             <h2 class="text-lg font-bold flex items-center gap-2 text-indigo-200">
               <i data-lucide="sun-medium" class="w-5 h-5 text-amber-400"></i> Daily Performance Report
             </h2>
-            <span class="text-xs text-indigo-300 font-medium">Real-Time Sync</span>
+            <div class="flex items-center gap-2">
+              <!-- PDF Export Action Buttons -->
+              <button onclick="exportColorfulPDF('today')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 transition shadow-sm" title="Download Daily Report PDF">
+                <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF (Today)
+              </button>
+              <button onclick="exportColorfulPDF('week')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs flex items-center gap-1 transition shadow-sm" title="Download Weekly Report PDF">
+                <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF (Weekly)
+              </button>
+            </div>
           </div>
 
           <!-- Comparison Card -->
@@ -1458,10 +1468,10 @@
       currentChartType = type;
       if (type === 'doughnut') {
         document.getElementById('btnDoughnut').className = 'p-1 rounded bg-slate-700 text-indigo-300 hover:bg-slate-600';
-        document.getElementById('btnBar').className = 'p-1 rounded bg-slate-900 text-slate-400 hover:bg-slate-800';
+        document.getElementById('btnBar').className = 'p-1 rounded bg-slate-900 text-slate-400 hover:text-slate-800';
       } else {
         document.getElementById('btnBar').className = 'p-1 rounded bg-slate-700 text-indigo-300 hover:bg-slate-600';
-        document.getElementById('btnDoughnut').className = 'p-1 rounded bg-slate-900 text-slate-400 hover:bg-slate-800';
+        document.getElementById('btnDoughnut').className = 'p-1 rounded bg-slate-900 text-slate-400 hover:text-slate-800';
       }
       updateChart();
     }
@@ -1540,6 +1550,146 @@
           } : {}
         }
       });
+    }
+
+    // ==========================================
+    // 5. COLORFUL PDF EXPORT ENGINE (Customized for Satyam Bhaiya)
+    // ==========================================
+    function exportColorfulPDF(type) {
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const targetLogs = getFilteredLogs(type);
+        if (targetLogs.length === 0) {
+          alert(`Export karne ke liye ${type === 'today' ? 'aaj' : 'is hafte'} ka koi study log available nahi hai!`);
+          return;
+        }
+
+        const totalMins = targetLogs.reduce((acc, curr) => acc + curr.duration, 0);
+        const userName = currentProfile ? currentProfile.name : "Satyam Yadav";
+        const titleText = type === 'today' ? "Daily Study Progress Report" : "Weekly Study Performance Report";
+        const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        const primaryColor = [79, 70, 229]; // Indigo
+        const darkBg = [15, 23, 42];        // Slate 900
+
+        // Header Background Banner
+        doc.setFillColor(darkBg[0], darkBg[1], darkBg[2]);
+        doc.rect(0, 0, 210, 42, 'F');
+
+        // Top Accent Line
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 42, 210, 3, 'F');
+
+        // Header Titles
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text("StudyTracker Pro Report", 14, 18);
+
+        doc.setFontSize(10);
+        doc.setTextColor(148, 163, 184);
+        doc.text(`Generated for: ${userName} | Date: ${dateStr}`, 14, 27);
+        
+        // Admin & Telegram Link added here with font size 14 for telegram link
+        doc.text("Admin: Satyam Bhaiya", 14, 34);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(14);
+        doc.setTextColor(59, 130, 246);
+        doc.text("https://telegram.me/stymmmmmmm", 75, 34);
+
+        // Report Title Badge
+        doc.setFontSize(14);
+        doc.setTextColor(79, 70, 229);
+        doc.text(titleText.toUpperCase(), 14, 56);
+
+        // Summary Card Box
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(14, 62, 182, 22, 3, 3, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, 62, 182, 22, 3, 3, 'S');
+
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Total Duration Studied:", 20, 75);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(15, 23, 42);
+        doc.text(formatTime(totalMins), 65, 76);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Total Completed Topics:", 120, 75);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(16, 185, 129);
+        doc.text(`${targetLogs.length} Topics`, 165, 76);
+
+        // Table Headers
+        let startY = 94;
+        doc.setFillColor(79, 70, 229);
+        doc.rect(14, startY, 182, 10, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text("Subject", 18, startY + 7);
+        doc.text("Topic / Chapter Goal", 65, startY + 7);
+        doc.text("Duration", 145, startY + 7);
+        doc.text("Date", 175, startY + 7);
+
+        startY += 10;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+
+        targetLogs.forEach((log, index) => {
+          if (startY > 275) {
+            doc.addPage();
+            startY = 20;
+          }
+
+          if (index % 2 === 0) {
+            doc.setFillColor(241, 245, 249);
+            doc.rect(14, startY, 182, 10, 'F');
+          }
+
+          doc.setTextColor(15, 23, 42);
+          doc.setFont("helvetica", "bold");
+          doc.text(doc.splitTextToSize(log.subject, 44), 18, startY + 6);
+
+          doc.setFont("helvetica", "normal");
+          doc.text(doc.splitTextToSize(log.topic, 75), 65, startY + 6);
+
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(79, 70, 229);
+          doc.text(formatTime(log.duration), 145, startY + 6);
+
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(100, 116, 139);
+          doc.text(log.date, 175, startY + 6);
+
+          startY += 11;
+        });
+
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(`StudyTracker Pro - Page ${i} of ${pageCount}`, 14, 290);
+          doc.text("Keep pushing your limits! 🚀", 160, 290);
+        }
+
+        const fileName = `StudyReport_${type.toUpperCase()}_${getTodayDateString()}.pdf`;
+        doc.save(fileName);
+        showToast("📥 Colorful PDF Downloaded Successfully!");
+      } catch (err) {
+        console.error("PDF Export Error:", err);
+        alert("PDF export me error aayi hai. Console check karein.");
+      }
     }
 
     function openSubjectDrilldownModal(subjectName) {
