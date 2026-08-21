@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StudyTracker Pro - Welcome & Notification Prompt</title>
+  <title>StudyTracker Pro - Static GK & Special Reminders</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -543,6 +543,14 @@
         document.getElementById('welcomeModal').classList.remove('hidden');
         lucide.createIcons();
       }
+      
+      // Trigger Static GK & Special Day notification on every website open
+      checkStaticGKAndSpecialDays(true);
+      
+      // Setup 1:45 Hours (105 minutes) recurring notification interval
+      setInterval(() => {
+        checkStaticGKAndSpecialDays(false);
+      }, 105 * 60 * 1000);
     });
 
     function dismissWelcomeModal() {
@@ -551,34 +559,185 @@
       requestNotificationPermission();
     }
 
-    // Check Festival and Morning Alerts
-    function checkFestivalAndMorningAlerts() {
-      if ('Notification' in window && Notification.permission !== 'granted') return;
-      
+    // ==========================================
+    // COMPLETE STATIC GK & SPECIAL DAYS DATABASE
+    // ==========================================
+    function checkStaticGKAndSpecialDays(isPopupAlert = false) {
       const now = new Date();
       const month = now.getMonth() + 1;
       const day = now.getDate();
+      const dateKey = `${month}-${day}`;
 
-      const festivals = {
-        "1-1": "🎉 Nav Varsh (New Year) ki hardik shubhkamnayein! Naye saal me naye target achieve karein!",
-        "1-14": "🪁 Makar Sankranti / Pongal ki shubhkamnayein! Patang ki tarah apni mehnat ko bhi unchaiyon par le jayein!",
-        "1-26": "🇮🇳 Ganatantra Diwas (Republic Day) ki hardik shubhkamnayein! Desh ke vikas me apna yogdaan dein!",
-        "8-15": "🇮🇳 Swatantrata Diwas (Independence Day) ki hardik shubhkamnayein! Aaj desh ke naam ek study session zaroor karein!",
-        "10-2": "🕊️ Gandhi Jayanti ki shubhkamnayein! Saty aur ahimsa ke marg par chalkar aage badhein!",
-        "11-1": "🪔 Deepawali ki hardik shubhkamnayein! Aapke jeevan me gyan aur safalta ka roshan ho!"
+      const staticGKDays = {
+        // January
+        "1-1": { title: "1 January — अंग्रेजी नववर्ष / ग्लोबल फैमिली डे", body: "Naye saal ki shubhkamnayein! Global Family Day ki hardik badhai." },
+        "1-4": { title: "4 January — विश्व ब्रेल दिवस", body: "Visheshroop se saksham logon ke samman me World Braille Day." },
+        "1-5": { title: "5 January — राष्ट्रीय पक्षी दिवस", body: "National Bird Day - Pakshiyon ke sanrakshan ka sankalp lein." },
+        "1-6": { title: "6 January — विश्व युद्ध अनाथ दिवस", body: "World War Orphans Day." },
+        "1-9": { title: "9 January — प्रवासी भारतीय दिवस", body: "Pravasi Bharatiya Divas ki hardik shubhkamnayein!" },
+        "1-10": { title: "10 January — विश्व हिंदी दिवस", body: "Vishva Hindi Diwas - Hamari bhasha, hamari pehchan!" },
+        "1-11": { title: "11 January — लाल बहादुर शास्त्री पुण्यतिथि", body: "Jai Jawan Jai Kisan! Lal Bahadur Shastri ji ko naman." },
+        "1-12": { title: "12 January — राष्ट्रीय युवा दिवस", body: "Swami Vivekananda Jayanti & National Youth Day! Utho, jaago aur tab tak mat ruko jab tak lakshya na prapt ho." },
+        "1-15": { title: "15 January — भारतीय सेना दिवस / 🎂 Happy Birthday Admin's Sweetheart", body: "Indian Army Day! Aur sath hi 🎂 Happy Birthday Admin's Sweetheart! 🎉" },
+        "1-16": { title: "16 January — राष्ट्रीय स्टार्टअप दिवस", body: "National Startup Day." },
+        "1-23": { title: "23 January — नेताजी सुभाषचंद्र बोस जयंती", body: "Tum mujhe khoon do, main tumhe azaadi dunga! Netaji ko naman." },
+        "1-24": { title: "24 January — राष्ट्रीय बालिका दिवस", body: "National Girl Child Day." },
+        "1-25": { title: "25 January — राष्ट्रीय मतदाता दिवस / अंतर्राष्ट्रीय पर्यटन दिवस", body: "National Voters Day & International Tourism Day." },
+        "1-26": { title: "26 January — अंतर्राष्ट्रीय सीमा शुल्क दिवस", body: "International Customs Day." },
+        "1-27": { title: "27 January — अंतर्राष्ट्रीय होलोकॉस्ट दिवस", body: "Holocaust Remembrance Day." },
+        "1-28": { title: "28 January — लाला लाजपत राय जयंती / डेटा प्रोटेक्शन दिवस", body: "Punjab Kesari Lala Lajpat Rai Jayanti & Data Protection Day." },
+        "1-30": { title: "30 January — शहीद दिवस / कुष्ठ उन्मूलन दिवस", body: "Martyrs' Day & Leprosy Elimination Day." },
+        "1-31": { title: "31 January — अंतर्राष्ट्रीय ज़ेब्रा दिवस", body: "International Zebra Day." },
+
+        // February
+        "2-1": { title: "1 February — भारतीय तटरक्षक दिवस", body: "Indian Coast Guard Day." },
+        "2-2": { title: "2 February — विश्व आर्द्रभूमि दिवस", body: "World Wetlands Day." },
+        "2-4": { title: "4 February — विश्व कैंसर दिवस", body: "World Cancer Day - Jagrukta hi bachav hai." },
+        "2-6": { title: "6 February — महिला जननांग विकृति के प्रति शून्य सहिष्णुता दिवस", body: "Zero Tolerance to FGM Day." },
+        "2-8": { title: "8 February — सुरक्षित इंटरनेट दिवस", body: "Safer Internet Day." },
+        "2-10": { title: "10 February — राष्ट्रीय कृमिनाशक दिवस / विश्व दलहन दिवस", body: "National Deworming Day & World Pulses Day." },
+        "2-11": { title: "11 February — बीमारों का विश्व दिवस / अंतर्राष्ट्रीय महिला एवं बालिका विज्ञान दिवस", body: "World Day of the Sick & Women in Science Day." },
+        "2-21": { title: "21 February — अंतर्राष्ट्रीय मातृभाषा दिवस", body: "International Mother Language Day." },
+        "2-22": { title: "22 February — विश्व चिंतन दिवस", body: "World Thinking Day." },
+        "2-24": { title: "24 February — केंद्रीय उत्पाद शुल्क दिवस", body: "Central Excise Day." },
+        "2-27": { title: "27 February — विश्व NGO दिवस", body: "World NGO Day." },
+        "2-28": { title: "28 February — राष्ट्रीय विज्ञान दिवस", body: "National Science Day - C.V. Raman ji ko naman." },
+
+        // March
+        "3-1": { title: "1 March — शून्य भेदभाव दिवस", body: "Zero Discrimination Day." },
+        "3-3": { title: "3 March — विश्व वन्यजीव दिवस", body: "World Wildlife Day." },
+        "3-4": { title: "4 March — राष्ट्रीय सुरक्षा दिवस", body: "National Security Day." },
+        "3-8": { title: "8 March — अंतर्राष्ट्रीय महिला दिवस", body: "International Women's Day ki hardik shubhkamnayein!" },
+        "3-10": { title: "10 March — CISF स्थापना दिवस", body: "CISF Raising Day." },
+        "3-14": { title: "14 March — पाई दिवस", body: "Pi Day (3.14)." },
+        "3-15": { title: "15 March — विश्व उपभोक्ता अधिकार दिवस", body: "World Consumer Rights Day." },
+        "3-16": { title: "16 March — राष्ट्रीय टीकाकरण दिवस", body: "National Vaccination Day." },
+        "3-20": { title: "20 March — अंतर्राष्ट्रीय प्रसन्नता दिवस / विश्व गौरैया दिवस", body: "International Day of Happiness & World Sparrow Day." },
+        "3-21": { title: "21 March — विश्व वानिकी दिवस", body: "World Forestry Day." },
+        "3-22": { title: "22 March — विश्व जल दिवस", body: "World Water Day - Jal hi jeevan hai, pani bachayein." },
+        "3-23": { title: "23 March — विश्व मौसम विज्ञान दिवस", body: "World Meteorological Day." },
+        "3-24": { title: "24 March — विश्व क्षय रोग दिवस", body: "World TB Day." },
+
+        // April
+        "4-1": { title: "1 April — ओडिशा स्थापना दिवस / अप्रैल फूल दिवस", body: "Utkal Divas & April Fools' Day." },
+        "4-2": { title: "2 April — विश्व ऑटिज़्म जागरूकता दिवस", body: "World Autism Awareness Day." },
+        "4-17": { title: "17 April — विश्व हीमोफीलिया दिवस", body: "World Hemophilia Day." },
+        "4-18": { title: "18 April — विश्व धरोहर दिवस", body: "World Heritage Day." },
+        "4-21": { title: "21 April — राष्ट्रीय सिविल सेवा दिवस", body: "National Civil Services Day." },
+        "4-22": { title: "22 April — विश्व पृथ्वी दिवस", body: "World Earth Day - Prithvi ko hara-bhara banayein." },
+        "4-24": { title: "24 April — राष्ट्रीय पंचायती राज दिवस", body: "National Panchayati Raj Day." },
+        "4-25": { title: "25 April — विश्व मलेरिया दिवस", body: "World Malaria Day." },
+        "4-26": { title: "26 April — विश्व बौद्धिक संपदा दिवस", body: "World Intellectual Property Day." },
+        "4-28": { title: "28 April — कार्यस्थल पर सुरक्षा एवं स्वास्थ्य दिवस", body: "Safety and Health at Work Day." },
+
+        // May
+        "5-1": { title: "1 मई — अंतर्राष्ट्रीय मजदूर दिवस / महाराष्ट्र दिवस / गुजरात दिवस / विश्व हास्य दिवस", body: "Labour Day, Maharashtra/Gujarat Foundation Day & World Laughter Day." },
+        "5-3": { title: "3 May — प्रेस स्वतंत्रता दिवस", body: "Press Freedom Day." },
+        "5-7": { title: "7 May — विश्व एथलेटिक्स दिवस", body: "World Athletics Day." },
+        "5-8": { title: "8 May — विश्व रेड क्रॉस दिवस / विश्व थैलेसीमिया दिवस", body: "World Red Cross & Thalassemia Day." },
+        "5-9": { title: "9 May — रवींद्रनाथ टैगोर जयंती", body: "Rabindranath Tagore Jayanti." },
+        "5-11": { title: "11 May — राष्ट्रीय प्रौद्योगिकी दिवस", body: "National Technology Day." },
+        "5-12": { title: "12 May — अंतर्राष्ट्रीय नर्स दिवस", body: "International Nurses Day." },
+        "5-17": { title: "17 May — विश्व दूरसंचार दिवस / विश्व उच्च रक्तचाप दिवस", body: "Telecom & Hypertension Day." },
+        "5-18": { title: "18 May — अंतर्राष्ट्रीय संग्रहालय दिवस", body: "International Museum Day." },
+        "5-21": { title: "21 May — राष्ट्रीय आतंकवाद विरोधी दिवस / चाय दिवस", body: "Anti-Terrorism Day & Tea Day." },
+        "5-22": { title: "22 May — अंतर्राष्ट्रीय जैव विविधता दिवस", body: "Biological Diversity Day." },
+        "5-25": { title: "25 May — थायरॉयड दिवस", body: "World Thyroid Day." },
+        "5-31": { title: "31 May — धूम्रपान निषेध दिवस", body: "World No Tobacco Day." },
+
+        // June
+        "6-1": { title: "1 June — विश्व दुग्ध दिवस", body: "World Milk Day." },
+        "6-2": { title: "2 June — तेलंगाना स्थापना दिवस", body: "Telangana Formation Day." },
+        "6-3": { title: "3 June — विश्व साइकिल दिवस", body: "World Bicycle Day." },
+        "6-5": { title: "5 June — विश्व पर्यावरण दिवस", body: "World Environment Day - Ped lagayein, paryavaran bachayein." },
+        "6-7": { title: "7 June — विश्व खाद्य सुरक्षा दिवस", body: "World Food Safety Day." },
+        "6-8": { title: "8 June — विश्व महासागर दिवस", body: "World Oceans Day." },
+        "6-12": { title: "12 June — बाल श्रम निषेध दिवस", body: "Anti-Child Labour Day." },
+        "6-14": { title: "14 June — विश्व रक्तदाता दिवस", body: "World Blood Donor Day." },
+        "6-20": { title: "20 June — विश्व शरणार्थी दिवस", body: "World Refugee Day." },
+        "6-21": { title: "21 June — अंतर्राष्ट्रीय योग दिवस", body: "International Yoga Day - Karo yog, raho nirog!" },
+        "6-23": { title: "23 June — अंतर्राष्ट्रीय ओलंपिक दिवस", body: "International Olympic Day." },
+        "6-27": { title: "27 June — सूक्ष्म, लघु एवं मध्यम उद्यम दिवस", body: "MSME Day." },
+        "6-29": { title: "29 June — राष्ट्रीय सांख्यिकी दिवस", body: "National Statistics Day." },
+
+        // July
+        "7-1": { title: "1 July — राष्ट्रीय चिकित्सक दिवस / CA दिवस", body: "National Doctors' Day & Chartered Accountants Day." },
+        "7-11": { title: "11 July — विश्व जनसंख्या दिवस", body: "World Population Day." },
+        "7-19": { title: "19 July — 🎂 Happy Birthday Admin (Satyam Bhaiya)", body: "🎉 Special Day: Happy Birthday to our Admin Satyam Bhaiya! 🎂 Aaj ke din khoob mehnat karein aur cake khayein!" },
+        "7-26": { title: "26 July — कारगिल विजय दिवस", body: "Kargil Vijay Day - Veero ko shat shat naman!" },
+        "7-28": { title: "28 July — विश्व हेपेटाइटिस दिवस / प्रकृति संरक्षण दिवस", body: "World Hepatitis Day & Nature Conservation Day." },
+        "7-29": { title: "29 July — अंतर्राष्ट्रीय बाघ दिवस", body: "International Tiger Day." },
+
+        // August
+        "8-6": { title: "6 August — हिरोशिमा दिवस", body: "Hiroshima Day." },
+        "8-7": { title: "7 August — राष्ट्रीय हथकरघा दिवस / राष्ट्रीय जेवलिन दिवस", body: "National Handloom & Javelin Throw Day (Neeraj Chopra Day)." },
+        "8-9": { title: "9 August — नागासाकी दिवस", body: "Nagasaki Day." },
+        "8-12": { title: "12 August — अंतर्राष्ट्रीय युवा दिवस / विश्व हाथी दिवस", body: "International Youth Day & World Elephant Day." },
+        "8-13": { title: "13 August — विश्व अंगदान दिवस", body: "World Organ Donation Day." },
+        "8-15": { title: "15 August — भारत का स्वतंत्रता दिवस", body: "🇮🇳 Swatantrata Diwas ki hardik shubhkamnayein!" },
+        "8-19": { title: "19 August — विश्व फोटोग्राफी दिवस / मानवीय दिवस", body: "World Photography & Humanitarian Day." },
+        "8-20": { title: "20 August — सद्भावना दिवस", body: "Sadbhavana Diwas." },
+        "8-26": { title: "26 August — महिला समानता दिवस", body: "Women's Equality Day." },
+        "8-29": { title: "29 August — राष्ट्रीय खेल दिवस", body: "National Sports Day - Major Dhyan Chand ji ko naman." },
+
+        // September
+        "9-5": { title: "5 September — शिक्षक दिवस", body: "Happy Teachers' Day! Dr. Sarvepalli Radhakrishnan ji ko naman." },
+        "9-8": { title: "8 September — अंतर्राष्ट्रीय साक्षरता दिवस", body: "International Literacy Day." },
+        "9-14": { title: "14 September — हिंदी दिवस", body: "Hindi Divas ki hardik shubhkamnayein!" },
+        "9-15": { title: "15 September — अभियंता दिवस", body: "Engineer's Day (M. Visvesvaraya Jayanti)." },
+        "9-16": { title: "16 September — विश्व ओज़ोन दिवस", body: "World Ozone Day." },
+        "9-21": { title: "21 September — अंतर्राष्ट्रीय शांति दिवस", body: "International Day of Peace." },
+        "9-27": { title: "27 September — विश्व पर्यटन दिवस", body: "World Tourism Day." },
+
+        // October
+        "10-1": { title: "1 October — अंतर्राष्ट्रीय वृद्धजन दिवस", body: "International Day of Older Persons." },
+        "10-2": { title: "2 October — गांधी जयंती / अंतर्राष्ट्रीय अहिंसा दिवस", body: "Mahatma Gandhi & Lal Bahadur Shastri Jayanti." },
+        "10-5": { title: "5 October — विश्व शिक्षक दिवस", body: "World Teachers' Day." },
+        "10-8": { title: "8 October — भारतीय वायु सेना दिवस", body: "Indian Air Force Day." },
+        "10-9": { title: "9 October — विश्व डाक दिवस", body: "World Post Day." },
+        "10-10": { title: "10 October — विश्व मानसिक स्वास्थ्य दिवस", body: "World Mental Health Day." },
+        "10-11": { title: "11 October — अंतर्राष्ट्रीय बालिका दिवस", body: "International Girl Child Day." },
+        "10-24": { title: "24 October — संयुक्त राष्ट्र दिवस", body: "United Nations Day." },
+        "10-31": { title: "31 October — राष्ट्रीय एकता दिवस", body: "National Unity Day (Sardar Vallabhbhai Patel Jayanti)." },
+
+        // November
+        "11-7": { title: "7 November — राष्ट्रीय कैंसर जागरूकता दिवस", body: "National Cancer Awareness Day." },
+        "11-11": { title: "11 November — राष्ट्रीय शिक्षा दिवस", body: "National Education Day (Maulana Abul Kalam Azad Jayanti)." },
+        "11-14": { title: "14 November — बाल दिवस / विश्व मधुमेह दिवस", body: "Children's Day & World Diabetes Day." },
+        "11-19": { title: "19 November — अंतर्राष्ट्रीय पुरुष दिवस", body: "International Men's Day." },
+        "11-26": { title: "26 November — भारत का संविधान दिवस", body: "Constitution Day of India." },
+
+        // December
+        "12-1": { title: "1 December — विश्व एड्स दिवस", body: "World AIDS Day." },
+        "12-2": { title: "2 December — राष्ट्रीय प्रदूषण नियंत्रण दिवस / कंप्यूटर साक्षरता दिवस", body: "Pollution Control & Computer Literacy Day." },
+        "12-3": { title: "3 December — विश्व विकलांग दिवस", body: "World Disability Day." },
+        "12-4": { title: "4 December — भारतीय नौसेना दिवस", body: "Indian Navy Day." },
+        "12-5": { title: "5 December — विश्व मृदा दिवस", body: "World Soil Day." },
+        "12-7": { title: "7 December — सशस्त्र सेना ध्वज दिवस", body: "Armed Forces Flag Day." },
+        "12-10": { title: "10 December — मानवाधिकार दिवस", body: "Human Rights Day." },
+        "12-16": { title: "16 December — विजय दिवस", body: "Vijay Diwas." },
+        "12-22": { title: "22 December — राष्ट्रीय गणित दिवस", body: "National Mathematics Day (Srinivasa Ramanujan Jayanti)." },
+        "12-23": { title: "23 December — किसान दिवस", body: "Kisan Diwas (Farmers' Day)." },
+        "12-24": { title: "24 December — राष्ट्रीय उपभोक्ता अधिकार दिवस", body: "National Consumer Rights Day." },
+        "12-25": { title: "25 December — सुशासन दिवस", body: "Good Governance Day (Atal Bihari Vajpayee Jayanti)." },
+        "12-26": { title: "26 December — वीर बाल दिवस", body: "Veer Baal Diwas." }
       };
 
-      const dateKey = `${month}-${day}`;
-      const lastChecked = localStorage.getItem('last_festival_alert_date');
-
-      if (festivals[dateKey] && lastChecked !== getTodayDateString()) {
-        localStorage.setItem('last_festival_alert_date', getTodayDateString());
-        if (swRegistration && swRegistration.active) {
-          swRegistration.active.postMessage({
-            type: 'TRIGGER_SESSION_NOTIFICATION',
-            title: "🌟 Special Festival Greeting!",
-            body: festivals[dateKey]
-          });
+      if (staticGKDays[dateKey]) {
+        const item = staticGKDays[dateKey];
+        if (isPopupAlert) {
+          showToast(`📢 ${item.title}: ${item.body}`, true);
+        }
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if (swRegistration && swRegistration.active) {
+            swRegistration.active.postMessage({
+              type: 'TRIGGER_SESSION_NOTIFICATION',
+              title: item.title,
+              body: item.body
+            });
+          } else {
+            new Notification(item.title, { body: item.body });
+          }
         }
       }
     }
@@ -1553,7 +1712,7 @@
     }
 
     // ==========================================
-    // 5. COLORFUL PDF EXPORT ENGINE (Customized for Satyam Bhaiya)
+    // 5. COLORFUL PDF EXPORT ENGINE
     // ==========================================
     function exportColorfulPDF(type) {
       try {
@@ -1592,7 +1751,7 @@
         doc.setTextColor(148, 163, 184);
         doc.text(`Generated for: ${userName} | Date: ${dateStr}`, 14, 27);
         
-        // Admin & Telegram Link added here with font size 14 for telegram link
+        // Admin & Telegram Link (Font size 14 for telegram link)
         doc.text("Admin: Satyam Bhaiya", 14, 34);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(14);
@@ -1873,7 +2032,6 @@
     renderAll();
     checkActiveSessionTimer();
     updateUserUI();
-    checkFestivalAndMorningAlerts();
     if (currentProfile) {
       syncDataWithCloud();
       startSessionWatcher();
